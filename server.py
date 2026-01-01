@@ -24,14 +24,20 @@ def main():
         while True:  # loop for keep-alive requests
             try:
                 data = b""
-                while b"\r\n\r\n" not in data:  #read request
-                    chunk = conn.recv(1024)
-                    if not chunk:  # client closed connection
-                        raise ConnectionResetError()
-                    data += chunk
-            except (socket.timeout, ConnectionResetError):
+                client_closed = False #assume client want to talk
+                while b"\r\n\r\n" not in data:
+                    input_client = conn.recv(1024)#get input line by line
+                    if not input_client: #if not got input then we close connection
+                        conn.close()
+                        client_closed = True
+                        break #get out of here
+                    data += input_client
+            except socket.timeout:
                 conn.close()
-                break  # wait for next client
+                break
+
+            if client_closed:  #if client closed bye bye
+                break
 
             request = data.decode(errors="ignore")
             print(request, end="")  # Print
@@ -42,7 +48,7 @@ def main():
                 break
 
             try:
-                method, path, _ = lines[0].split()
+                _, path, _ = lines[0].split()
             except ValueError:
                 conn.close()
                 break
@@ -61,7 +67,6 @@ def main():
                     "\r\n"
                 )
                 conn.sendall(response.encode())
-                conn.shutdown(socket.SHUT_WR)  #shut down connection
                 conn.close()
                 break
 
@@ -80,7 +85,6 @@ def main():
                     "\r\n"
                 )
                 conn.sendall(response.encode())
-                conn.shutdown(socket.SHUT_WR)  # its a shut down (blackpink)
                 conn.close()
                 break
 
